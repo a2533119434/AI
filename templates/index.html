@@ -1,0 +1,2050 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="msapplication-tap-highlight" content="no">
+    <title>AI沙盒游戏</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        /* 移动端触摸反馈样式 */
+        .touching {
+            background-color: rgba(255, 255, 255, 0.1) !important;
+            transform: scale(0.95) !important;
+        }
+        
+        /* 防止文本选择时的蓝色高亮 */
+        * {
+            -webkit-tap-highlight-color: transparent;
+            box-sizing: border-box;
+        }
+        
+        /* AI对话界面样式 */
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            position: relative;
+        }
+        
+        .chat-sidebar {
+            position: absolute;
+            left: 20px;
+            top: 80px;
+            width: 250px;
+            height: calc(100vh - 150px);
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .chat-sidebar-header {
+            padding: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .new-chat-btn {
+            width: 100%;
+            padding: 10px;
+        }
+        
+        .chat-history-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+        }
+        
+        .chat-history-item {
+            padding: 12px;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        .chat-history-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateY(-2px);
+        }
+        
+        .chat-history-item.active {
+            background: rgba(102, 126, 234, 0.2);
+            border-color: rgba(102, 126, 234, 0.5);
+        }
+        
+        .chat-history-title {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: white;
+            margin-bottom: 5px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .chat-history-date {
+            font-size: 0.7rem;
+            color: rgba(255, 255, 255, 0.5);
+        }
+        
+        .chat-main {
+            margin-left: 270px;
+            height: calc(100vh - 150px);
+            display: flex;
+            flex-direction: column;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            overflow: hidden;
+        }
+        
+        .chat-header {
+            padding: 3px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(0, 0, 0, 0.2);
+        }
+        
+        .mobile-chat-controls {
+            display: none;
+            margin-bottom: 10px;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .chat-title {
+            font-size: 1rem;
+            font-weight: 500;
+            color: white;
+        }
+        
+        .chat-history-toggle {
+            padding: 6px 12px;
+            font-size: 0.85rem;
+        }
+        
+        .chat-settings {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+        }
+        
+        .chat-setting-item {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .chat-setting-item label {
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.7);
+            margin-bottom: 5px;
+        }
+        
+        .chat-select, .chat-setting-item textarea {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 8px;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+        
+        .chat-setting-item textarea {
+            resize: none;
+            height: 60px;
+        }
+        
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            padding-bottom: 80px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .chat-message {
+            max-width: 85%;
+            padding: 12px 16px;
+            border-radius: 12px;
+            word-break: break-word;
+            line-height: 1.5;
+            position: relative;
+            animation: message-appear 0.3s ease;
+        }
+        
+        @keyframes message-appear {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .chat-message.user {
+            align-self: flex-end;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-bottom-right-radius: 2px;
+        }
+        
+        .chat-message.assistant {
+            align-self: flex-start;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border-bottom-left-radius: 2px;
+        }
+        
+        .message-time {
+            font-size: 0.7rem;
+            color: rgba(255, 255, 255, 0.5);
+            margin-top: 5px;
+            text-align: right;
+        }
+        
+        .chat-input-area {
+            padding: 5px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(0, 0, 0, 0.2);
+            display: flex;
+            gap: 10px;
+            position: sticky;
+            bottom: 0;
+        }
+        
+        #chat-input {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            color: white;
+            padding: 12px;
+            resize: none;
+            min-height: 24px;
+            max-height: 200px;
+            line-height: 1.5;
+        }
+        
+        .chat-top-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            padding: 0 5px;
+        }
+        
+        .chat-actions {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .icon-btn {
+            width: 38px;
+            height: 38px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            color: white;
+            font-size: 16px;
+        }
+        
+        .chat-history-actions {
+            margin-bottom: 15px;
+        }
+        
+        .setting-hint {
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.6);
+            margin-top: 5px;
+            display: block;
+        }
+        
+        .chat-input {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 8px;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            width: 100%;
+        }
+        
+        .typing-indicator {
+            display: flex;
+            gap: 5px;
+            padding: 8px 0;
+        }
+        
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            animation: typing-dot 1.4s infinite ease-in-out;
+        }
+        
+        .typing-dot:nth-child(1) { animation-delay: 0s; }
+        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+        
+        @keyframes typing-dot {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-5px); }
+        }
+        
+        /* 响应式样式 */
+        @media (max-width: 900px) {
+            .chat-container {
+                padding: 0;
+                max-width: 100%;
+            }
+            
+            .chat-main {
+                margin-left: 0;
+                height: 100vh;
+                border-radius: 0;
+                border: none;
+            }
+            
+            .chat-messages {
+                height: calc(100vh - 140px);
+                padding-bottom: 120px;
+            }
+            
+            .chat-message {
+                max-width: 90%;
+            }
+            
+            .modal-content {
+                width: 95%;
+                max-height: 90vh;
+            }
+            
+            .chat-header {
+                position: sticky;
+                top: 0;
+                z-index: 10;
+                background: rgba(0, 0, 0, 0.8);
+            }
+            
+            .chat-input-area {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                width: 100%;
+                z-index: 10;
+                background: rgba(0, 0, 0, 0.8);
+                backdrop-filter: blur(10px);
+            }
+            
+            .icon-btn {
+                width: 36px;
+                height: 36px;
+                font-size: 15px;
+            }
+        }
+        
+        /* 移动端按钮活跃状态 */
+        button:active, .btn:active, .menu-btn:active, .nav-btn:active, .tab-btn:active {
+            background-color: rgba(255, 255, 255, 0.2) !important;
+        }
+
+        /* 新增的移动端优化样式 */
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        #app {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            width: 100%;
+        }
+
+        .screen {
+            height: 100%;
+            width: 100%;
+            display: none;
+        }
+
+        .screen.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 游戏主界面布局优化 */
+        .mobile-game-container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        /* 头部区域 - 固定高度 */
+        .mobile-header {
+            height: auto;
+            min-height: 60px;
+            max-height: 80px;
+            padding: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #1a1a2e;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            flex-shrink: 0;
+        }
+
+        /* 主内容区域 - 70%高度 */
+        .mobile-content {
+            height: 70%;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            flex: 1;
+        }
+
+        /* 功能导航优化 */
+        .function-nav {
+            display: flex;
+            overflow-x: auto;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+            background-color: #16213e;
+            padding: 8px 4px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .function-nav::-webkit-scrollbar {
+            display: none;
+        }
+
+        .nav-btn {
+            flex: 0 0 auto;
+            white-space: nowrap;
+            padding: 8px 6px;
+            margin: 0 2px;
+            border-radius: 16px;
+            font-size: 0.85rem;
+            background-color: transparent;
+            border: none;
+            color: #ddd;
+        }
+
+        .nav-btn.active {
+            background-color: #0f3460;
+            color: white;
+        }
+
+        /* 内容面板区域 */
+        .content-panels {
+            flex: 1;
+            overflow: hidden;
+            padding: 10px;
+            background-color: #0f3460;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+
+        .content-panel {
+            display: none;
+            height: 100%;
+            overflow-y: auto;
+            padding-bottom: 20px;
+        }
+
+        .content-panel.active {
+            display: block;
+        }
+
+        /* 地图容器样式优化 */
+        .map-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        /* 底部对话区域 - 固定高度 */
+        .bottom-area {
+            height: auto;
+            min-height: 100px;
+            max-height: 150px;
+            display: flex;
+            flex-direction: column;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            background-color: #1a1a2e;
+            flex-shrink: 0;
+        }
+
+        /* 底部标签导航 */
+        .tab-navigation {
+            display: flex;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 10px;
+            text-align: center;
+            background-color: transparent;
+            border: none;
+            color: #ddd;
+            font-size: 0.9rem;
+        }
+
+        .tab-btn.active {
+            color: white;
+            border-bottom: 2px solid #e94560;
+        }
+
+        /* 输入框区域 */
+        .input-area {
+            flex: 1;
+            padding: 8px;
+            display: flex;
+            align-items: flex-end;
+        }
+
+        .input-container {
+            width: 100%;
+        }
+
+        .input-wrapper {
+            display: flex;
+            width: 100%;
+            background-color: rgba(255, 255, 255, 0.05);
+            border-radius: 18px;
+            overflow: hidden;
+        }
+
+        .input-wrapper textarea {
+            flex: 1;
+            border: none;
+            background: transparent;
+            padding: 10px 15px;
+            resize: none;
+            color: white;
+            font-size: 0.95rem;
+            min-height: 40px;
+            max-height: 80px;
+        }
+
+        .send-btn {
+            width: 80px;
+            border: none;
+            background-color: #e94560;
+            color: white;
+            font-weight: bold;
+            font-size: 0.85rem;
+            padding: 0 15px;
+        }
+
+        /* 面板内容样式优化 */
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .panel-header h3 {
+            margin: 0;
+            font-size: 1.1rem;
+        }
+
+        /* 移除重复的底部tabs和input-area，整合到bottom-area */
+        .bottom-tabs {
+            display: none;
+        }
+
+        /* 标签面板样式 */
+        .tab-panel {
+            display: none;
+            padding: 8px;
+        }
+
+        .tab-panel.active {
+            display: block;
+        }
+        
+        /* 世界信息样式 */
+        .world-info {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .world-info h2 {
+            margin: 0;
+            font-size: 1.2rem;
+        }
+        
+        .time-info {
+            font-size: 0.9rem;
+            color: #aaa;
+        }
+        
+        /* 优化卡片样式 */
+        .region-card, .faction-card, .character-card {
+            background-color: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 10px;
+        }
+
+        /* 新增小说记录列表样式 */
+        .novel-record-item {
+            background-color: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .novel-record-item:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            transform: translateY(-2px);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .novel-record-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+
+        .novel-record-header h4 {
+            margin: 0;
+            font-size: 1rem;
+            color: #e94560;
+        }
+
+        .novel-day {
+            font-size: 0.8rem;
+            color: #aaa;
+            background-color: rgba(233, 69, 96, 0.2);
+            padding: 2px 6px;
+            border-radius: 10px;
+        }
+
+        .novel-meta {
+            display: flex;
+            margin-bottom: 8px;
+            font-size: 0.8rem;
+            color: #aaa;
+        }
+
+        .novel-style {
+            margin-right: 10px;
+            background-color: rgba(255, 255, 255, 0.1);
+            padding: 1px 6px;
+            border-radius: 10px;
+        }
+
+        .novel-date {
+            color: #888;
+        }
+
+        .novel-preview {
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.7);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            white-space: normal;
+            line-height: 1.5;
+        }
+
+        /* 小说详情模态框样式 */
+        .novel-meta-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+            background-color: rgba(0, 0, 0, 0.2);
+            padding: 10px;
+            border-radius: 8px;
+        }
+
+        .novel-meta-info p {
+            margin: 5px 0;
+        }
+
+        /* 小说内容容器样式 */
+        .novel-content-container {
+            margin-top: 20px;
+            max-height: 60vh;
+            overflow-y: auto;
+            padding: 0 15px;
+            background-color: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+        }
+
+        .novel-content-simple p {
+            margin: 10px 0;
+            line-height: 1.6;
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .chapter-content {
+            margin-bottom: 20px;
+        }
+
+        .chapter-title {
+            color: #e94560;
+            margin-bottom: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 5px;
+        }
+
+        .chapter-selector {
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+        }
+
+        .chapter-selector label {
+            margin-right: 10px;
+            white-space: nowrap;
+        }
+
+        .chapter-selector select {
+            flex: 1;
+            padding: 8px 12px;
+            background-color: rgba(0, 0, 0, 0.3);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+        }
+
+        .novel-controls {
+            margin-top: 15px;
+            text-align: center;
+        }
+
+        /* 增强模态框滚动 */
+        .modal-body {
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+
+        /* 小说记录列表容器样式 */
+        .novel-records-list {
+            height: 100%;
+            width: 100%;
+            overflow-y: auto;
+            padding: 5px;
+        }
+
+        /* 小说记录面板样式 */
+        #novel-records-panel {
+            display: none;
+            height: 100%;
+            overflow: hidden;
+            flex-direction: column;
+        }
+
+        #novel-records-panel.active {
+            display: flex;
+        }
+
+        #novel-records-panel .panel-header {
+            flex-shrink: 0;
+        }
+        
+        /* AI模型选择器样式 */
+        .ai-model-selector {
+            margin-right: 10px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .header-select {
+            background-color: rgba(15, 52, 96, 0.8);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            padding: 5px 8px;
+            font-size: 0.85rem;
+            max-width: 140px;
+            height: 32px;
+        }
+        
+        .header-select:focus {
+            outline: none;
+            border-color: rgba(233, 69, 96, 0.6);
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <!-- 主菜单界面 -->
+        <div id="main-menu" class="screen active">
+            <div class="menu-container">
+                <h1 class="game-title">
+                    <i class="fas fa-globe-asia"></i>
+                    AI沙盒世界
+                </h1>
+                <div class="menu-buttons">
+                    <button class="menu-btn primary" onclick="showNewGameScreen()">
+                        <i class="fas fa-plus"></i>
+                        开始新游戏
+                    </button>
+                    <button class="menu-btn secondary" onclick="showLoadGameScreen()">
+                        <i class="fas fa-folder-open"></i>
+                        读取存档
+                    </button>
+                    <button class="menu-btn secondary" onclick="showAIConfigScreen()">
+                        <i class="fas fa-cog"></i>
+                        AI配置
+                    </button>
+                    <button class="menu-btn secondary" onclick="showAIChatScreen()">
+                        <i class="fas fa-comments"></i>
+                        AI对话
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI配置界面 -->
+        <div id="ai-config" class="screen">
+            <div class="config-container">
+                <h2 class="screen-title">
+                    <i class="fas fa-robot"></i>
+                    AI模型配置
+                </h2>
+                <div class="config-content">
+                    <div class="config-list" id="config-list">
+                        <!-- 动态加载配置列表 -->
+                    </div>
+                    <div class="config-actions">
+                        <button class="btn primary" onclick="showAddConfigForm()">
+                            <i class="fas fa-plus"></i>
+                            添加配置
+                        </button>
+                    </div>
+                </div>
+                <div class="screen-buttons">
+                    <button class="btn secondary" onclick="showMainMenu()">
+                        <i class="fas fa-arrow-left"></i>
+                        返回
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- AI对话界面 -->
+        <div id="ai-chat" class="screen">
+            <div class="chat-container">
+                <div class="chat-main">
+                    <div class="chat-header">
+                        <div class="chat-top-actions">
+                            <div class="chat-title" id="current-chat-title">新对话</div>
+                            <div class="chat-actions">
+                                <button class="btn icon-btn" onclick="showChatSettings()">
+                                    <i class="fas fa-cog"></i>
+                                </button>
+                                <button class="btn icon-btn" onclick="showChatHistory()">
+                                    <i class="fas fa-history"></i>
+                                </button>
+                                <button class="btn icon-btn" onclick="createNewChat()">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                                <button class="btn icon-btn" onclick="showMainMenu()">
+                                    <i class="fas fa-home"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="chat-messages" id="chat-messages">
+                        <!-- 动态加载消息 -->
+                    </div>
+                    
+                    <div class="chat-input-area">
+                        <textarea 
+                            id="chat-input" 
+                            placeholder="输入消息..." 
+                            rows="3"
+                            onkeydown="if(event.keyCode == 13 && !event.shiftKey) { event.preventDefault(); sendChatMessage(); }"
+                        ></textarea>
+                        <button class="btn primary" onclick="sendChatMessage()">
+                            <i class="fas fa-paper-plane"></i>
+                            发送
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 聊天设置模态框 -->
+        <div id="chat-settings-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3><i class="fas fa-cog"></i> 聊天设置</h3>
+                    <button class="close-btn" onclick="closeModal('chat-settings-modal')">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="chat-setting-item">
+                        <label for="chat-ai-model">选择AI模型</label>
+                        <select id="chat-ai-model" class="chat-select">
+                            <option value="">选择AI模型</option>
+                            <!-- 动态加载AI模型选项 -->
+                        </select>
+                    </div>
+                    <div class="chat-setting-item">
+                        <label for="chat-system-prompt">系统提示词</label>
+                        <textarea id="chat-system-prompt" placeholder="输入系统提示词..."></textarea>
+                    </div>
+                    <div class="chat-setting-item">
+                        <label for="chat-context-count">上下文条数</label>
+                        <input type="number" id="chat-context-count" class="chat-input" value="1" min="0" placeholder="输入数字，0表示不传递上下文，-1表示全部">
+                        <span class="setting-hint">0表示不传递上下文，-1表示全部，其他数字表示传递的对话轮数</span>
+                    </div>
+                    <div class="modal-buttons">
+                        <button class="btn primary" onclick="applySettings()">
+                            应用设置
+                        </button>
+                        <button class="btn secondary" onclick="closeModal('chat-settings-modal')">
+                            取消
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 聊天历史模态框 -->
+        <div id="chat-history-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3><i class="fas fa-history"></i> 历史会话</h3>
+                    <button class="close-btn" onclick="closeModal('chat-history-modal')">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="chat-history-actions">
+                        <button class="btn primary" onclick="createNewChat()">
+                            <i class="fas fa-plus"></i>
+                            新对话
+                        </button>
+                    </div>
+                    <div class="chat-history-list" id="chat-history-list">
+                        <!-- 动态加载历史会话列表 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 读取存档界面 -->
+        <div id="load-game" class="screen">
+            <div class="load-container">
+                <h2 class="screen-title">
+                    <i class="fas fa-save"></i>
+                    选择存档
+                </h2>
+                <div class="saves-list" id="saves-list">
+                    <!-- 动态加载存档列表 -->
+                </div>
+                <div class="screen-buttons">
+                    <button class="btn secondary" onclick="showMainMenu()">
+                        <i class="fas fa-arrow-left"></i>
+                        返回
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 新游戏设置界面 -->
+        <div id="new-game" class="screen">
+            <div class="setup-container">
+                <h2 class="screen-title">
+                    <i class="fas fa-rocket"></i>
+                    创建新世界
+                </h2>
+                
+                <!-- 步骤指示器 -->
+                <div class="setup-steps">
+                    <div class="step active" data-step="1">
+                        <span class="step-number">1</span>
+                        <span class="step-text">世界背景</span>
+                    </div>
+                    <div class="step" data-step="2">
+                        <span class="step-number">2</span>
+                        <span class="step-text">世界地图</span>
+                    </div>
+                    <div class="step" data-step="3">
+                        <span class="step-number">3</span>
+                        <span class="step-text">创建势力</span>
+                    </div>
+                    <div class="step" data-step="4">
+                        <span class="step-number">4</span>
+                        <span class="step-text">创建人物</span>
+                    </div>
+                </div>
+
+                <!-- 第一步：世界背景 -->
+                <div id="step-1" class="setup-step active">
+                    <h3>设置世界背景</h3>
+                    <div class="input-group">
+                        <label for="save-name">存档名称</label>
+                        <input type="text" id="save-name" placeholder="给你的世界起个名字...">
+                    </div>
+                    
+                    <!-- 模版选择区域 -->
+                    <div class="input-group">
+                        <label for="template-select">选择世界模版</label>
+                        <select id="template-select" onchange="loadTemplate()">
+                            <option value="">从零开始创建</option>
+                            <!-- 动态加载模版选项 -->
+                        </select>
+                        <button class="btn secondary small" onclick="refreshTemplates()">
+                            <i class="fas fa-sync"></i>
+                            刷新模版
+                        </button>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label for="world-background">世界背景</label>
+                        <div class="background-options">
+                            <button class="option-btn" onclick="selectBackground('fantasy')">奇幻修仙</button>
+                            <button class="option-btn" onclick="selectBackground('scifi')">科幻未来</button>
+                            <button class="option-btn" onclick="selectBackground('modern')">现代都市</button>
+                            <button class="option-btn" onclick="selectBackground('historical')">历史古代</button>
+                            <button class="option-btn" onclick="selectBackground('wuxia')">武侠江湖</button>
+                        </div>
+                        <textarea id="world-background" placeholder="描述你的世界设定..." rows="6"></textarea>
+                    </div>
+                    <div class="input-group">
+                        <label for="world-introduction">世界介绍（可选）</label>
+                        <textarea id="world-introduction" placeholder="详细的世界介绍..." rows="4"></textarea>
+                    </div>
+                    <div class="input-group">
+                        <label for="cultivation-system">修炼体系（可选）</label>
+                        <textarea id="cultivation-system" placeholder="修炼境界、体系设定..." rows="3"></textarea>
+                    </div>
+                    <div class="step-buttons">
+                        <button class="btn secondary" onclick="showMainMenu()">取消</button>
+                        <button class="btn primary" onclick="generateCompleteWorld()">
+                            <i class="fas fa-magic"></i>
+                            AI生成完整世界
+                        </button>
+                        <button class="btn primary" onclick="nextStep()">下一步</button>
+                    </div>
+                </div>
+
+                <!-- 第二步：世界地图 -->
+                <div id="step-2" class="setup-step">
+                    <h3>设置世界地图</h3>
+                    <div class="regions-container">
+                        <div class="regions-list" id="regions-list">
+                            <!-- 动态生成地区列表 -->
+                        </div>
+                        <div class="add-region">
+                            <button class="btn primary" onclick="showAddRegionForm()">
+                                <i class="fas fa-plus"></i>
+                                添加地区
+                            </button>
+                        </div>
+                    </div>
+                    <div class="step-buttons">
+                        <button class="btn secondary" onclick="prevStep()">上一步</button>
+                        <button class="btn primary" onclick="nextStep()">下一步</button>
+                    </div>
+                </div>
+
+                <!-- 第三步：创建势力 -->
+                <div id="step-3" class="setup-step">
+                    <h3>创建势力</h3>
+                    <div class="factions-container">
+                        <div class="factions-list" id="factions-list">
+                            <!-- 动态生成势力列表 -->
+                        </div>
+                        <div class="add-faction">
+                            <button class="btn primary" onclick="showAddFactionForm()">
+                                <i class="fas fa-plus"></i>
+                                添加势力
+                            </button>
+                        </div>
+                    </div>
+                    <div class="step-buttons">
+                        <button class="btn secondary" onclick="prevStep()">上一步</button>
+                        <button class="btn primary" onclick="nextStep()">下一步</button>
+                    </div>
+                </div>
+
+                <!-- 第四步：创建人物 -->
+                <div id="step-4" class="setup-step">
+                    <h3>创建人物</h3>
+                    <div class="characters-container">
+                        <div class="characters-list" id="characters-list">
+                            <!-- 动态生成人物列表 -->
+                        </div>
+                        <div class="add-character">
+                            <button class="btn primary" onclick="showAddCharacterForm()">
+                                <i class="fas fa-plus"></i>
+                                添加人物
+                            </button>
+                        </div>
+                    </div>
+                    <div class="step-buttons">
+                        <button class="btn secondary" onclick="prevStep()">上一步</button>
+                        <button class="btn success" onclick="saveAsTemplate()">
+                            <i class="fas fa-bookmark"></i>
+                            保存为模版
+                        </button>
+                        <button class="btn primary" onclick="startGame()">
+                            <i class="fas fa-play"></i>
+                            开始游戏
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 游戏主界面 - 重新组织布局 -->
+        <div id="game-screen" class="screen">
+            <div class="mobile-game-container">
+                <!-- 顶部头部信息 - 10%高度 -->
+                <header class="mobile-header">
+                    <div class="world-info">
+                        <h2 id="world-name">天武大陆</h2>
+                        <div class="time-info">
+                            <span id="current-day">第2天</span>
+                        </div>
+                    </div>
+                    <div class="header-actions">
+                        <div class="ai-model-selector">
+                            <select id="ai-model-selector" class="header-select">
+                                <option value="">选择AI模型</option>
+                                <!-- 动态加载AI模型选项 -->
+                            </select>
+                        </div>
+                        <button class="btn icon-btn" onclick="saveGame()">
+                            <i class="fas fa-save"></i>
+                        </button>
+                        <button class="btn icon-btn" onclick="showMainMenu()">
+                            <i class="fas fa-home"></i>
+                        </button>
+                    </div>
+                </header>
+
+                <!-- 主内容区域 - 70%高度 -->
+                <div class="mobile-content">
+                    <!-- 功能导航按钮 -->
+                    <div class="function-nav">
+                        <button class="nav-btn active" data-panel="world-map" onclick="switchPanel('world-map')">
+                            <i class="fas fa-map"></i>
+                            <span>世界地图</span>
+                        </button>
+                        <button class="nav-btn" data-panel="factions" onclick="switchPanel('factions')">
+                            <i class="fas fa-flag"></i>
+                            <span>势力状态</span>
+                        </button>
+                        <button class="nav-btn" data-panel="characters" onclick="switchPanel('characters')">
+                            <i class="fas fa-users"></i>
+                            <span>人物状态</span>
+                        </button>
+                        <button class="nav-btn" data-panel="events" onclick="switchPanel('events')">
+                            <i class="fas fa-history"></i>
+                            <span>世界大事记</span>
+                        </button>
+                        <button class="nav-btn" data-panel="ai-logs" onclick="switchPanel('ai-logs')">
+                            <i class="fas fa-robot"></i>
+                            <span>AI生成记录</span>
+                        </button>
+                        <button class="nav-btn" data-panel="novel-records" onclick="switchPanel('novel-records')">
+                            <i class="fas fa-book"></i>
+                            <span>小说记录</span>
+                        </button>
+                    </div>
+
+                    <!-- 内容面板区域 -->
+                    <div class="content-panels">
+                        <!-- 世界地图面板 -->
+                        <div id="world-map-panel" class="content-panel active">
+                            <div class="panel-header">
+                                <h3><i class="fas fa-map"></i> 世界地图</h3>
+                                <button class="btn secondary" onclick="showAddRegionForm()">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            </div>
+                            <div class="map-container">
+                                <div class="region-card">
+                                    <div class="region-header">
+                                        <h4>中原</h4>
+                                        <span class="region-type">平原</span>
+                                    </div>
+                                    <p>世界中心，富饶的平原，人烟稠密的政治中心</p>
+                                </div>
+                                <div class="region-card">
+                                    <div class="region-header">
+                                        <h4>北方草原</h4>
+                                        <span class="region-type">草原</span>
+                                    </div>
+                                    <p>寒冷的草原和山峦，游牧民族的家园</p>
+                                </div>
+                                <div class="region-card">
+                                    <div class="region-header">
+                                        <h4>南方雨林</h4>
+                                        <span class="region-type">雨林</span>
+                                    </div>
+                                    <p>湿热的热带雨林和沼泽，危险而神秘</p>
+                                </div>
+                                <div class="region-card">
+                                    <div class="region-header">
+                                        <h4>西方沙漠</h4>
+                                        <span class="region-type">沙漠</span>
+                                    </div>
+                                    <p>广袤的沙漠戈壁，人烟稀少</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 势力状态面板 -->
+                        <div id="factions-panel" class="content-panel">
+                            <div class="panel-header">
+                                <h3><i class="fas fa-flag"></i> 势力状态</h3>
+                                <button class="btn secondary" onclick="showAddFactionForm()">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            </div>
+                            <div class="factions-list" id="factions-status">
+                                <!-- 动态生成势力状态 -->
+                            </div>
+                        </div>
+
+                        <!-- 人物状态面板 -->
+                        <div id="characters-panel" class="content-panel">
+                            <div class="panel-header">
+                                <h3><i class="fas fa-users"></i> 人物状态</h3>
+                                <button class="btn secondary" onclick="showAddCharacterForm()">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            </div>
+                            <div class="characters-list" id="characters-status">
+                                <!-- 动态生成人物状态 -->
+                            </div>
+                        </div>
+
+                        <!-- 世界大事记面板 -->
+                        <div id="events-panel" class="content-panel">
+                            <div class="panel-header">
+                                <h3><i class="fas fa-history"></i> 世界大事记</h3>
+                                <div class="events-filter">
+                                    <select id="events-filter" onchange="filterEvents()">
+                                        <option value="all">全部</option>
+                                        <option value="world">世界</option>
+                                        <option value="faction">势力</option>
+                                        <option value="character">人物</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="events-list" id="world-events">
+                                <!-- 动态生成事件 -->
+                            </div>
+                        </div>
+
+                        <!-- AI生成记录面板 -->
+                        <div id="ai-logs-panel" class="content-panel">
+                            <div class="panel-header">
+                                <h3><i class="fas fa-robot"></i> AI生成记录</h3>
+                            </div>
+                            <div class="generation-list" id="generation-logs">
+                                <!-- 动态生成记录 -->
+                            </div>
+                        </div>
+
+                        <!-- 小说记录面板 -->
+                        <div id="novel-records-panel" class="content-panel">
+                            <div class="panel-header">
+                                <h3><i class="fas fa-book"></i> 小说生成记录</h3>
+                                <button class="btn secondary small" onclick="loadNovelRecords()">
+                                    <i class="fas fa-sync"></i> 刷新
+                                </button>
+                            </div>
+                            <div class="novel-records-list" id="novel-records">
+                                <p style="text-align: center; color: rgba(255,255,255,0.6); padding: 40px;">
+                                    加载中...
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 底部对话区域 - 20%高度 -->
+                <div class="bottom-area">
+                    <!-- 统一的故事生成标题 -->
+                    <div class="story-generation-header">
+                        <h3><i class="fas fa-magic"></i> 故事生成与推进</h3>
+                        <p class="description">输入引导词，AI将同时生成故事推进和小说内容</p>
+                    </div>
+
+                    <!-- 输入框区域 -->
+                    <div class="input-area">
+                        <div class="input-container">
+                            <div class="input-wrapper">
+                                <textarea id="user-input" placeholder="输入故事引导词，例如：一场神秘的修炼者大会即将召开..." rows="2"></textarea>
+                                <button class="send-btn" onclick="processStoryGeneration()">
+                                    <i class="fas fa-magic"></i>
+                                    开始生成
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 世界信息模态框 -->
+        <div id="world-info-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3><i class="fas fa-globe"></i> 世界资料</h3>
+                    <button class="close-btn" onclick="closeModal('world-info-modal')">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body" id="world-info-content">
+                    <!-- 动态加载世界信息 -->
+                </div>
+                <div class="modal-buttons">
+                    <button class="btn primary" onclick="showEditWorldForm()">
+                        <i class="fas fa-edit"></i>
+                        编辑世界
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI配置模态框 -->
+        <div id="ai-config-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3><i class="fas fa-robot"></i> AI配置</h3>
+                    <button class="close-btn" onclick="closeModal('ai-config-modal')">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form id="ai-config-form">
+                        <div class="input-group">
+                            <label for="ai-name">配置名称</label>
+                            <input type="text" id="ai-name" required placeholder="例如：DeepSeek">
+                        </div>
+                        <div class="input-group">
+                            <label for="api-key">API密钥</label>
+                            <input type="password" id="api-key" required placeholder="请输入API密钥">
+                        </div>
+                        <div class="input-group">
+                            <label for="base-url">API地址</label>
+                            <input type="url" id="base-url" required placeholder="https://api.deepseek.com">
+                        </div>
+                        <div class="input-group">
+                            <label for="model-name">模型名称</label>
+                            <input type="text" id="model-name" required placeholder="deepseek-chat">
+                        </div>
+                        <div class="input-group">
+                            <label for="temperature">温度 (0-1)</label>
+                            <input type="range" id="temperature" min="0" max="1" step="0.1" value="0.7">
+                            <span id="temp-value">0.7</span>
+                        </div>
+                        <div class="input-group">
+                            <label for="max-tokens">最大令牌数</label>
+                            <input type="number" id="max-tokens" value="2000" min="100" max="8000">
+                        </div>
+                        <div class="input-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="is-active">
+                                设为当前使用的配置
+                            </label>
+                        </div>
+                        <div class="modal-buttons">
+                            <button type="button" class="btn secondary" onclick="closeModal('ai-config-modal')">取消</button>
+                            <button type="submit" class="btn primary">保存配置</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- 添加势力模态框 -->
+        <div id="add-faction-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3><i class="fas fa-flag"></i> 添加势力</h3>
+                    <button class="close-btn" onclick="closeModal('add-faction-modal')">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form id="faction-form">
+                        <div class="input-group">
+                            <label for="faction-name">势力名称</label>
+                            <input type="text" id="faction-name" required>
+                        </div>
+                        <div class="input-group">
+                            <label for="faction-ideal">势力理想</label>
+                            <textarea id="faction-ideal" rows="2" placeholder="势力的理想和目标..."></textarea>
+                        </div>
+                        <div class="input-group">
+                            <label for="faction-background">势力背景</label>
+                            <textarea id="faction-background" rows="3" placeholder="势力的历史背景..."></textarea>
+                        </div>
+                        <div class="input-group">
+                            <label for="faction-description">势力描述</label>
+                            <textarea id="faction-description" rows="3" placeholder="势力的详细描述..."></textarea>
+                        </div>
+                        <div class="input-group">
+                            <label for="faction-headquarters">总部位置</label>
+                            <input type="text" id="faction-headquarters" placeholder="势力总部的位置...">
+                        </div>
+                        <div class="input-group">
+                            <label for="faction-power">势力强度 (1-100)</label>
+                            <input type="range" id="faction-power" min="1" max="100" value="50">
+                            <span id="power-value">50</span>
+                        </div>
+                        <div class="modal-buttons">
+                            <button type="button" class="btn secondary" onclick="closeModal('add-faction-modal')">取消</button>
+                            <button type="submit" class="btn primary">添加</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- 添加人物模态框 -->
+        <div id="add-character-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3><i class="fas fa-user"></i> 添加人物</h3>
+                    <button class="close-btn" onclick="closeModal('add-character-modal')">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form id="character-form">
+                        <div class="form-row">
+                            <div class="input-group">
+                                <label for="character-name">人物姓名</label>
+                                <input type="text" id="character-name" required>
+                            </div>
+                            <div class="input-group">
+                                <label for="character-faction">所属势力</label>
+                                <select id="character-faction">
+                                    <option value="">无势力</option>
+                                    <!-- 动态生成势力选项 -->
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="input-group">
+                                <label for="character-age">年龄</label>
+                                <input type="number" id="character-age" min="1" max="1000" value="25">
+                            </div>
+                            <div class="input-group">
+                                <label for="character-birthday">生日</label>
+                                <input type="text" id="character-birthday" placeholder="春月初三">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="input-group">
+                                <label for="character-position">职位</label>
+                                <input type="text" id="character-position" placeholder="长老、弟子、掌门...">
+                            </div>
+                            <div class="input-group">
+                                <label for="character-realm">修炼境界</label>
+                                <input type="text" id="character-realm" placeholder="金丹期、元婴期...">
+                            </div>
+                        </div>
+                        <div class="input-group">
+                            <label for="character-location">当前位置</label>
+                            <input type="text" id="character-location" placeholder="人物当前所在位置...">
+                        </div>
+                        <div class="input-group">
+                            <label for="character-personality">性格特点</label>
+                            <textarea id="character-personality" rows="2" placeholder="描述人物的性格特点..."></textarea>
+                        </div>
+                        <div class="input-group">
+                            <label for="character-goals">个人目标</label>
+                            <textarea id="character-goals" rows="2" placeholder="人物的目标和愿望..."></textarea>
+                        </div>
+                        <div class="input-group">
+                            <label for="character-experience">人物经历</label>
+                            <textarea id="character-experience" rows="3" placeholder="人物的背景经历..."></textarea>
+                        </div>
+                        <div class="input-group">
+                            <label for="character-relationships">人际关系</label>
+                            <textarea id="character-relationships" rows="2" placeholder="与其他人物的关系..."></textarea>
+                        </div>
+                        <div class="modal-buttons">
+                            <button type="button" class="btn secondary" onclick="closeModal('add-character-modal')">取消</button>
+                            <button type="submit" class="btn primary">添加</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- 添加地区模态框 -->
+        <div id="add-region-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3><i class="fas fa-map-marker"></i> 添加地区</h3>
+                    <button class="close-btn" onclick="closeModal('add-region-modal')">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form id="region-form">
+                        <div class="input-group">
+                            <label for="region-name">地区名称</label>
+                            <input type="text" id="region-name" required>
+                        </div>
+                        <div class="input-group">
+                            <label for="region-type">地区类型</label>
+                            <select id="region-type">
+                                <option value="州">州</option>
+                                <option value="城">城</option>
+                                <option value="山">山</option>
+                                <option value="森林">森林</option>
+                                <option value="湖泊">湖泊</option>
+                                <option value="平原">平原</option>
+                                <option value="区域">区域</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label for="region-parent">父级区域</label>
+                            <select id="region-parent">
+                                <option value="">无</option>
+                                <!-- 动态生成区域选项 -->
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label for="region-faction">控制势力</label>
+                            <select id="region-faction">
+                                <option value="">无</option>
+                                <!-- 动态生成势力选项 -->
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label for="region-description">地区描述</label>
+                            <textarea id="region-description" rows="3" placeholder="描述这个地区的特色..."></textarea>
+                        </div>
+                        <div class="modal-buttons">
+                            <button type="button" class="btn secondary" onclick="closeModal('add-region-modal')">取消</button>
+                            <button type="submit" class="btn primary">添加</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- 保存为模版模态框 -->
+        <div id="save-template-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3><i class="fas fa-bookmark"></i> 保存为世界模版</h3>
+                    <button class="close-btn" onclick="closeModal('save-template-modal')">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form id="template-form">
+                        <div class="input-group">
+                            <label for="template-name">模版名称</label>
+                            <input type="text" id="template-name" required placeholder="给模版起个名字...">
+                        </div>
+                        <div class="input-group">
+                            <label for="template-description">模版描述</label>
+                            <textarea id="template-description" rows="3" placeholder="描述这个模版的特点和用途..."></textarea>
+                        </div>
+                        <div class="template-preview">
+                            <h4>将保存的内容：</h4>
+                            <div class="preview-item">
+                                <strong>世界背景：</strong><span id="preview-background">-</span>
+                            </div>
+                            <div class="preview-item">
+                                <strong>势力数量：</strong><span id="preview-factions">0</span>
+                            </div>
+                            <div class="preview-item">
+                                <strong>人物数量：</strong><span id="preview-characters">0</span>
+                            </div>
+                            <div class="preview-item">
+                                <strong>地区数量：</strong><span id="preview-regions">0</span>
+                            </div>
+                        </div>
+                        <div class="modal-buttons">
+                            <button type="button" class="btn secondary" onclick="closeModal('save-template-modal')">取消</button>
+                            <button type="submit" class="btn primary">保存模版</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- 加载提示 -->
+        <div id="loading" class="loading-overlay">
+            <div class="loading-content">
+                <div class="spinner"></div>
+                <p>AI正在思考中...</p>
+            </div>
+        </div>
+        
+        <!-- 隐藏的模拟参数 -->
+        <input type="hidden" id="simulation-days" value="1">
+        <input type="hidden" id="story-guide" value="">
+        <input type="hidden" id="story-model-id" value="">
+        
+        <!-- 小说生成隐藏参数 -->
+        <input type="hidden" id="novel-theme" value="">
+        <input type="hidden" id="novel-day" value="1">
+        <input type="hidden" id="novel-style" value="classic">
+        <input type="hidden" id="novel-model-id" value="">
+    </div>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <!-- 添加移动端优化脚本 -->
+    <script>
+        // 页面加载完成后，加载AI模型列表
+        document.addEventListener('DOMContentLoaded', function() {
+            loadAIModels();
+        });
+        
+        // 加载AI模型列表
+        function loadAIModels() {
+            console.log('开始加载AI模型列表...');
+            fetch('/api/ai-configs')
+                .then(response => {
+                    console.log('AI模型请求状态:', response.status);
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('获取到AI模型数据:', data);
+                    const selector = document.getElementById('ai-model-selector');
+                    // 清空现有选项，只保留默认选项
+                    while (selector.options.length > 1) {
+                        selector.remove(1);
+                    }
+                    
+                    // 获取保存的模型ID
+                    const savedModelId = localStorage.getItem('selectedAIModelId');
+                    
+                    // 添加AI模型选项
+                    if (data && Array.isArray(data)) {
+                        data.forEach(config => {
+                            const option = document.createElement('option');
+                            option.value = config.id;
+                            option.textContent = config.name;
+                            // 如果是保存的模型ID或当前使用的配置，设为选中
+                            if ((savedModelId && savedModelId == config.id) || 
+                                (!savedModelId && config.is_active)) {
+                                option.selected = true;
+                            }
+                            selector.appendChild(option);
+                        });
+                        console.log(`已加载${data.length}个AI模型`);
+                    } else {
+                        console.error('AI模型数据格式不正确:', data);
+                    }
+                })
+                .catch(error => {
+                    console.error('加载AI模型失败:', error);
+                });
+        }
+        
+        // 切换AI模型
+        document.getElementById('ai-model-selector').addEventListener('change', function() {
+            const selectedModel = this.value;
+            if (!selectedModel) return;
+            
+            console.log('切换AI模型:', selectedModel);
+            
+            // 保存选择的模型ID到localStorage
+            localStorage.setItem('selectedAIModelId', selectedModel);
+            
+            // 使用正确的API端点
+            fetch(`/api/ai-configs/${selectedModel}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ is_active: true })
+            })
+            .then(response => {
+                console.log('切换模型响应状态:', response.status);
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    // 显示轻量级提示
+                    const msgElement = document.createElement('div');
+                    msgElement.className = 'temp-message';
+                    msgElement.style.cssText = 'position:fixed;top:20%;left:50%;transform:translateX(-50%);background:rgba(15,52,96,0.9);color:white;padding:10px 20px;border-radius:8px;z-index:1000;';
+                    msgElement.textContent = `已切换到模型: ${this.options[this.selectedIndex].text}`;
+                    document.body.appendChild(msgElement);
+                    
+                    // 3秒后自动移除提示
+                    setTimeout(() => {
+                        document.body.removeChild(msgElement);
+                    }, 3000);
+                } else {
+                    alert('切换AI模型失败: ' + (data.error || '未知错误'));
+                }
+            })
+            .catch(error => {
+                console.error('切换AI模型失败:', error);
+                alert('切换AI模型失败，请检查网络连接');
+            });
+        });
+        
+        // 切换底部标签 - 已移除，因为现在使用统一的故事生成功能
+        
+        // 处理故事生成（合并的功能）
+        function processStoryGeneration() {
+            const input = document.getElementById('user-input').value;
+            
+            if (!input.trim()) {
+                alert('请输入故事引导词！');
+                return;
+            }
+            
+            // 检查存档状态
+            if (!gameState || !gameState.currentSave) {
+                alert('请先加载游戏存档！');
+                return;
+            }
+            
+            // 获取当前选择的AI模型ID
+            const modelSelector = document.getElementById('ai-model-selector');
+            const selectedModelId = modelSelector ? modelSelector.value : '';
+            
+            // 开始流式生成
+            startStreamGeneration(input, selectedModelId);
+            
+            // 清空输入框
+            document.getElementById('user-input').value = '';
+        }
+        
+        // 开始流式生成
+        async function startStreamGeneration(storyGuide, modelId) {
+            // 切换到AI生成记录面板
+            showPanel('ai-logs-panel');
+            
+            const generationLogs = document.getElementById('generation-logs');
+            
+            // 清空现有内容并显示加载状态
+            generationLogs.innerHTML = '<div class="loading-message"><i class="fas fa-spinner fa-spin"></i> 正在生成故事和小说...</div>';
+            
+            // 构建请求数据
+            const requestData = {
+                story_guide: storyGuide
+            };
+            
+            if (modelId) {
+                requestData.model_config_id = parseInt(modelId);
+            }
+            
+            try {
+                // 使用fetch API进行流式请求
+                const response = await fetch('/api/saves/' + gameState.currentSave.id + '/generate-story-novel', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestData)
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+                
+                while (true) {
+                    const { done, value } = await reader.read();
+                    
+                    if (done) break;
+                    
+                    // 解码数据
+                    buffer += decoder.decode(value, { stream: true });
+                    
+                    // 处理完整的数据行
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop(); // 保留不完整的行
+                    
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            try {
+                                const data = JSON.parse(line.substring(6));
+                                handleStreamData(data, generationLogs);
+                            } catch (e) {
+                                console.error('解析流式数据出错:', e, line);
+                            }
+                        }
+                    }
+                }
+                
+            } catch (error) {
+                console.error('流式请求出错:', error);
+                generationLogs.innerHTML = '<div class="error-message"><i class="fas fa-exclamation-triangle"></i> 连接出错：' + error.message + '</div>';
+            }
+        }
+        
+        // 处理流式数据
+        function handleStreamData(data, container) {
+            switch(data.type) {
+                case 'start':
+                    container.innerHTML = '<div class="generation-status">' + data.message + '</div>';
+                    break;
+                    
+                case 'novel_title':
+                    container.innerHTML = '<div class="novel-display"><h2 class="novel-title">' + data.title + '</h2><div class="novel-chapters" id="novel-chapters"></div></div>';
+                    break;
+                    
+                case 'chapter_title':
+                    const chaptersContainer = document.getElementById('novel-chapters');
+                    if (chaptersContainer) {
+                        const chapterDiv = document.createElement('div');
+                        chapterDiv.className = 'chapter-display';
+                        chapterDiv.id = `chapter-${data.chapter_index}`;
+                        chapterDiv.innerHTML = `
+                            <h3 class="chapter-title">${data.chapter_title}</h3>
+                            <div class="chapter-content" id="chapter-content-${data.chapter_index}"></div>
+                        `;
+                        chaptersContainer.appendChild(chapterDiv);
+                        
+                        // 移除自动滚动，保持用户的滚动位置
+                        // chapterDiv.scrollIntoView({ behavior: 'smooth' });
+                    }
+                    break;
+                    
+                case 'content_chunk':
+                    // 实时添加内容块
+                    const currentChapterContent = document.getElementById('chapter-content-0'); // 假设只有一章
+                    if (currentChapterContent) {
+                        // 将换行符转换为<br>标签
+                        const formattedContent = data.content.replace(/\n/g, '<br>');
+                        currentChapterContent.innerHTML += formattedContent;
+                        
+                        // 移除自动滚动，让用户自己控制滚动位置
+                        // if (!data.is_final) {
+                        //     currentChapterContent.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                        // }
+                    }
+                    break;
+                    
+                case 'novel_chapter':
+                    // 保留原有的处理方式作为备用
+                    const chaptersContainer2 = document.getElementById('novel-chapters');
+                    if (chaptersContainer2) {
+                        const chapterDiv = document.createElement('div');
+                        chapterDiv.className = 'chapter-display';
+                        chapterDiv.innerHTML = `
+                            <h3 class="chapter-title">${data.chapter_title}</h3>
+                            <div class="chapter-content">${data.chapter_content.replace(/\n/g, '<br>')}</div>
+                        `;
+                        chaptersContainer2.appendChild(chapterDiv);
+                        
+                        // 移除自动滚动，保持用户的滚动位置
+                        // chapterDiv.scrollIntoView({ behavior: 'smooth' });
+                    }
+                    break;
+                    
+                case 'novel_complete':
+                    const statusDiv = document.createElement('div');
+                    statusDiv.className = 'completion-status';
+                    statusDiv.innerHTML = '<i class="fas fa-check-circle"></i> 小说生成完成，正在生成故事推进...';
+                    container.appendChild(statusDiv);
+                    break;
+                    
+                case 'story_progress':
+                    // 显示故事推进信息
+                    const storyDiv = document.createElement('div');
+                    storyDiv.className = 'story-progress-display';
+                    storyDiv.innerHTML = '<h3><i class="fas fa-history"></i> 故事推进</h3>';
+                    
+                    const storyData = data.data;
+                    
+                    // 显示世界事件
+                    if (storyData.world_events && storyData.world_events.length > 0) {
+                        const worldEventsDiv = document.createElement('div');
+                        worldEventsDiv.innerHTML = '<h4>世界事件</h4>';
+                        storyData.world_events.forEach(event => {
+                            const eventDiv = document.createElement('div');
+                            eventDiv.className = 'event-item';
+                            eventDiv.innerHTML = `
+                                <strong>${event.title}</strong><br>
+                                <small>第${event.day}天 ${event.time_period || ''} - ${event.location || ''}</small><br>
+                                ${event.description}
+                            `;
+                            worldEventsDiv.appendChild(eventDiv);
+                        });
+                        storyDiv.appendChild(worldEventsDiv);
+                    }
+                    
+                    // 显示势力事件
+                    if (storyData.faction_events && storyData.faction_events.length > 0) {
+                        const factionEventsDiv = document.createElement('div');
+                        factionEventsDiv.innerHTML = '<h4>势力事件</h4>';
+                        storyData.faction_events.forEach(event => {
+                            const eventDiv = document.createElement('div');
+                            eventDiv.className = 'event-item';
+                            eventDiv.innerHTML = `
+                                <strong>${event.title}</strong><br>
+                                <small>第${event.day}天 ${event.time_period || ''}</small><br>
+                                ${event.description}
+                            `;
+                            factionEventsDiv.appendChild(eventDiv);
+                        });
+                        storyDiv.appendChild(factionEventsDiv);
+                    }
+                    
+                    // 显示人物事件
+                    if (storyData.character_events && storyData.character_events.length > 0) {
+                        const characterEventsDiv = document.createElement('div');
+                        characterEventsDiv.innerHTML = '<h4>人物事件</h4>';
+                        storyData.character_events.forEach(event => {
+                            const eventDiv = document.createElement('div');
+                            eventDiv.className = 'event-item';
+                            eventDiv.innerHTML = `
+                                <strong>${event.title}</strong><br>
+                                <small>第${event.day}天 ${event.time_period || ''}</small><br>
+                                ${event.description}
+                            `;
+                            characterEventsDiv.appendChild(eventDiv);
+                        });
+                        storyDiv.appendChild(characterEventsDiv);
+                    }
+                    
+                    // 显示摘要
+                    if (storyData.summary) {
+                        const summaryDiv = document.createElement('div');
+                        summaryDiv.className = 'story-summary';
+                        summaryDiv.innerHTML = `<h4>故事摘要</h4><p>${storyData.summary}</p>`;
+                        storyDiv.appendChild(summaryDiv);
+                    }
+                    
+                    container.appendChild(storyDiv);
+                    break;
+                    
+                case 'complete':
+                    const completeStatusDiv = document.createElement('div');
+                    completeStatusDiv.className = 'completion-status';
+                    completeStatusDiv.innerHTML = '<i class="fas fa-check-circle"></i> 内容生成完成，正在保存数据...';
+                    container.appendChild(completeStatusDiv);
+                    break;
+                    
+                case 'data_saved':
+                    // 更新游戏状态显示
+                    updateGameStateDisplay(data);
+                    
+                    const saveStatusDiv = document.createElement('div');
+                    saveStatusDiv.className = 'completion-status';
+                    saveStatusDiv.innerHTML = `
+                        <i class="fas fa-check-circle"></i> 数据保存完成<br>
+                        <small>当前时间：${data.new_time}</small><br>
+                        <small>小说ID：${data.novel_id}</small>
+                    `;
+                    container.appendChild(saveStatusDiv);
+                    break;
+                    
+                case 'final_complete':
+                    // 添加完成提示和刷新按钮
+                    const finalCompleteDiv = document.createElement('div');
+                    finalCompleteDiv.className = 'completion-status';
+                    finalCompleteDiv.innerHTML = `
+                        <i class="fas fa-check-circle"></i> 全部完成！<br>
+                        <button class="btn primary small" onclick="refreshGameData()" style="margin-top: 10px;">
+                            <i class="fas fa-sync"></i> 刷新游戏数据
+                        </button>
+                    `;
+                    container.appendChild(finalCompleteDiv);
+                    break;
+                    
+                case 'error':
+                    container.innerHTML = '<div class="error-message"><i class="fas fa-exclamation-triangle"></i> 生成失败：' + data.error + '</div>';
+                    break;
+            }
+        }
+        
+        // 刷新游戏数据
+        function refreshGameData() {
+            if (gameState.currentSave) {
+                loadGame(gameState.currentSave.id);
+            }
+        }
+        
+        // 更新游戏状态显示
+        function updateGameStateDisplay(data) {
+            // 更新当前天数和时间
+            const currentDayEl = document.getElementById('current-day');
+            const currentTimeEl = document.getElementById('current-time');
+            
+            if (currentDayEl && data.new_day) {
+                currentDayEl.textContent = `第${data.new_day}天`;
+            }
+            if (currentTimeEl && data.new_time) {
+                currentTimeEl.textContent = data.new_time;
+            }
+            
+            // 更新gameState
+            if (gameState.currentSave) {
+                gameState.currentSave.current_day = data.new_day;
+                gameState.currentSave.current_time = data.new_time;
+            }
+        }
+        
+        // 切换内容面板
+        function switchPanel(panelId) {
+            // 移除所有导航按钮的活跃状态
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // 激活选中的导航按钮
+            document.querySelector(`.nav-btn[data-panel="${panelId}"]`).classList.add('active');
+            
+            // 隐藏所有内容面板
+            document.querySelectorAll('.content-panel').forEach(panel => {
+                panel.classList.remove('active');
+            });
+            
+            // 显示选中的内容面板
+            document.getElementById(`${panelId}-panel`).classList.add('active');
+        }
+
+        // 显示指定面板（用于流式生成时切换到AI生成记录面板）
+        function showPanel(panelId) {
+            // 移除-panel后缀，因为switchPanel会自动添加
+            const panelName = panelId.replace('-panel', '');
+            switchPanel(panelName);
+        }
+    </script>
+</body>
+</html> 
