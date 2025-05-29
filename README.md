@@ -157,20 +157,6 @@ AI_Word/
 - `POST /api/ai/generate-novel` - 生成小说
 - `POST /api/chat-stream` - 聊天对话
 
-## 🎨 功能演示
-
-### 世界模版选择
-![世界模版](images/ff68c7700350ede9e053bd628f2b1c07_compress.jpg)
-
-### AI生成界面
-![AI生成](image/ff68c7700350ede9e053bd628f2b1c07_compress.jpg))
-
-### 故事模拟
-![故事模拟](image/ff68c7700350ede9e053bd628f2b1c07_compress.jpg))
-
-### 聊天系统
-![聊天系统](ff68c7700350ede9e053bd628f2b1c07_compress.jpg))
-
 ## 🔑 配置说明
 
 ### AI模型配置
