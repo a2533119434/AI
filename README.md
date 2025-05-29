@@ -3,11 +3,10 @@
 一个基于人工智能的沙盒式修仙世界构建和故事生成游戏，让玩家能够创建属于自己的修仙世界，并观看AI驱动的角色在其中演绎精彩故事。
 这个项目可以带你了解LangChain/流式传输/提示词的基本使用！
 
-<img src="image/6f592d907d03d322126c53924e098337_compress.jpg" alt="" width="200"><img src="image/5a5d8c3c953fd5c06c17f617fd8113c9_compress.jpg" alt="" width="200">
-<img src="image/a08c780f6188406a7ca40945ed80f59c_compress.jpg" alt="" width="200">
-<img src="image/06d2f4326db99c6f81383c0c4b33179b_compress.jpg" alt="" width="200">
-<img src="image/ff68c7700350ede9e053bd628f2b1c07_compress.jpg" alt="" width="200">
-<img src="image/4fb4ccfd3c4e63831f86a94b70145075_compress.jpg" alt="" width="200">
+<img src="image/6f592d907d03d322126c53924e098337_compress.jpg" alt="" width="200"><img src="image/5a5d8c3c953fd5c06c17f617fd8113c9_compress.jpg" alt="" width="200"><img src="image/a08c780f6188406a7ca40945ed80f59c_compress.jpg" alt="" width="200">
+<img src="image/06d2f4326db99c6f81383c0c4b33179b_compress.jpg" alt="" width="200"><img src="image/ff68c7700350ede9e053bd628f2b1c07_compress.jpg" alt="" width="200"><img src="image/4fb4ccfd3c4e63831f86a94b70145075_compress.jpg" alt="" width="200">
+
+
 
 - **世界模版系统**：内置经典修仙世界模版，支持自定义模版创建和保存
 - **AI世界生成**：一键生成完整世界设定，包括背景、势力、人物和地理
