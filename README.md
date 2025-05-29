@@ -1,15 +1,8 @@
 # 🌟 AI沙盒小说 - AI Word
 
 一个基于人工智能的沙盒式修仙世界构建和故事生成游戏，让玩家能够创建属于自己的修仙世界，并观看AI驱动的角色在其中演绎精彩故事。
-演示图片在image文件夹中！
+这个项目可以带你了解LangChain/流式传输/提示词的基本使用！演示图片在image文件夹中！
 
-[![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://python.org)
-[![Flask](https://img.shields.io/badge/Flask-2.3.3-green.svg)](https://flask.palletsprojects.com)
-[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-
-## ✨ 主要特性
-
-### 🎯 智能世界构建
 - **世界模版系统**：内置经典修仙世界模版，支持自定义模版创建和保存
 - **AI世界生成**：一键生成完整世界设定，包括背景、势力、人物和地理
 - **修炼体系**：自定义境界划分和修炼规则
@@ -18,6 +11,14 @@
 ### 👥 动态角色系统
 - **智能人物生成**：AI创建具有独特性格、背景和目标的角色
 - **势力关系**：复杂的势力间关系网络（友好/敌对/中立/联盟）
+
+[![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://python.org)
+[![Flask](https://img.shields.io/badge/Flask-2.3.3-green.svg)](https://flask.palletsprojects.com)
+[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+## ✨ 主要特性
+
+### 🎯 智能世界构建
 - **人物关系**：师父弟子、朋友敌人等多维度人际关系
 - **角色成长**：随时间推移的能力提升和经历积累
 
