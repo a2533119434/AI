@@ -1,6 +1,7 @@
-# 🌟 AI修仙沙盒游戏 - AI Word
+# 🌟 AI沙盒小说 - AI Word
 
 一个基于人工智能的沙盒式修仙世界构建和故事生成游戏，让玩家能够创建属于自己的修仙世界，并观看AI驱动的角色在其中演绎精彩故事。
+演示图片在image文件夹中！
 
 [![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://python.org)
 [![Flask](https://img.shields.io/badge/Flask-2.3.3-green.svg)](https://flask.palletsprojects.com)
@@ -208,7 +209,6 @@ AI_Word/
 - [LangChain](https://langchain.com/) - AI应用框架
 - [OpenAI](https://openai.com/) - AI模型提供商
 - [DeepSeek](https://deepseek.com/) - AI模型提供商
-- [Bootstrap](https://getbootstrap.com/) - UI框架
 
 ## 📞 联系方式
 
