@@ -40,7 +40,7 @@ class AIEngine:
         except Exception as e:
             # 默认配置
             self.llm = ChatOpenAI(
-                api_key="sk-712c9b0d195d4f61bdb14626ba6dd95e",
+                api_key="XXXXX",
                 base_url="https://api.deepseek.com",
                 model="deepseek-chat",
                 temperature=0.7
